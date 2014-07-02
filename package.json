@@ -9,7 +9,7 @@
     "commonjs-everywhere": "~0.9.4"
   },
   "scripts": {
-    "prepublish": "./bin/build"
+    "prepublish": "bin\\build.bat"
   },
   "browser": "./dist/gif.js",
   "keywords": [
