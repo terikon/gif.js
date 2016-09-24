@@ -186,7 +186,7 @@ class GIF extends EventEmitter
       dither: @options.dither
       globalPalette: @options.globalPalette
       repeat: @options.repeat
-      canTransfer: (browser.name is 'chrome')
+      canTransfer: true
 
     if frame.data?
       task.data = frame.data
