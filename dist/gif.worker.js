@@ -175,6 +175,7 @@
 	  this.indexedPixels = null; // converted frame indexed to palette
 	  this.colorDepth = null; // number of bit planes
 	  this.colorTab = null; // RGB palette
+	  this.neuQuant = null; // NeuQuant instance that was used to generate this.colorTab.
 	  this.usedEntry = new Array(); // active palette entries
 	  this.palSize = 7; // color table size (bits-1)
 	  this.dispose = -1; // disposal code (-1 = use default)
@@ -333,9 +334,9 @@
 	*/
 	GIFEncoder.prototype.analyzePixels = function() {
 	  if (!this.colorTab) {
-	    var imgq = new NeuQuant(this.pixels, this.sample);
-	    imgq.buildColormap(); // create reduced palette
-	    this.colorTab = imgq.getColormap();
+	    this.neuQuant = new NeuQuant(this.pixels, this.sample);
+	    this.neuQuant.buildColormap(); // create reduced palette
+	    this.colorTab = this.neuQuant.getColormap();
 	  }
 	
 	  // map image pixels to new palette
@@ -357,6 +358,7 @@
 	
 	/*
 	  Index pixels, without dithering
+	  This method is most expensive (75% of time) because of calls to findClosestRGB, and findClosestRGB should be optimized.
 	*/
 	GIFEncoder.prototype.indexPixels = function(imgq) {
 	  var nPix = this.pixels.length / 3;
@@ -476,9 +478,14 @@
 	  return this.findClosestRGB((c & 0xFF0000) >> 16, (c & 0x00FF00) >> 8, (c & 0x0000FF), used);
 	};
 	
+	// Should be heavily optimized
 	GIFEncoder.prototype.findClosestRGB = function(r, g, b, used) {
 	  if (this.colorTab === null) return -1;
 	
+	  if (this.neuQuant && !used) {
+	    return this.neuQuant.lookupRGB(r, g, b);
+	  }
+	  
 	  var c = b | (g << 8) | (r << 16);
 	
 	  var minpos = 0;
