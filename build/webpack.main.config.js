@@ -9,6 +9,6 @@ module.exports = merge(config, {
     path: 'dist',
     filename: '[name].js',
     library: 'GIF',
-    libraryTarget: 'commonjs2',
+    libraryTarget: 'umd',
   },
 });
