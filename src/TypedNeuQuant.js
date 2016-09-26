@@ -19,6 +19,9 @@
  * that this copyright notice remain intact.
  *
  * (JavaScript port 2012 by Johan Nordberg)
+ *
+ * Micro-optimization
+ *  Roman Viskin (npm@terikon.com)
  */
 
 var ncycles = 100; // number of learning cycles
@@ -166,6 +169,7 @@ function NeuQuant(pixels, samplefac) {
     Private Method: contest
 
     searches for biased BGR values
+    should be heavily optimized
   */
   function contest(b, g, r) {
     /*
@@ -174,6 +178,10 @@ function NeuQuant(pixels, samplefac) {
       for frequently chosen neurons, freq[i] is high and bias[i] is negative
       bias[i] = gamma * ((1 / netsize) - freq[i])
     */
+
+    b = b | 0;
+    g = g | 0;
+    r = r | 0;
 
     var bestd = ~(1 << 31);
     var bestbiasd = bestd;
@@ -184,13 +192,13 @@ function NeuQuant(pixels, samplefac) {
     for (i = 0; i < netsize; i++) {
       n = network[i];
 
-      dist = Math.abs(n[0] - b) + Math.abs(n[1] - g) + Math.abs(n[2] - r);
+      dist = (Math.abs((n[0] | 0) - b) + Math.abs((n[1] | 0) - g) + Math.abs((n[2] | 0) - r)) | 0;
       if (dist < bestd) {
         bestd = dist;
         bestpos = i;
       }
 
-      biasdist = dist - ((bias[i]) >> (intbiasshift - netbiasshift));
+      biasdist = dist - ((bias[i] | 0) >> (intbiasshift - netbiasshift));
       if (biasdist < bestbiasd) {
         bestbiasd = biasdist;
         bestbiaspos = i;
@@ -253,51 +261,57 @@ function NeuQuant(pixels, samplefac) {
     Private Method: inxsearch
 
     searches for BGR values 0..255 and returns a color index
+    should be heavily optimized
   */
   function inxsearch(b, g, r) {
+
+    b = b | 0;
+    g = g | 0;
+    r = r | 0;
+
     var a, p, dist;
 
     var bestd = 1000; // biggest possible dist is 256*3
     var best = -1;
 
-    var i = netindex[g]; // index on g
+    var i = netindex[g] | 0; // index on g
     var j = i - 1; // start at netindex[g] and work outwards
 
     while ((i < netsize) || (j >= 0)) {
       if (i < netsize) {
         p = network[i];
-        dist = p[1] - g; // inx key
+        dist = (p[1] | 0) - g; // inx key
         if (dist >= bestd) i = netsize; // stop iter
         else {
           i++;
           if (dist < 0) dist = -dist;
-          a = p[0] - b; if (a < 0) a = -a;
+          a = (p[0] | 0) - b; if (a < 0) a = -a;
           dist += a;
           if (dist < bestd) {
-            a = p[2] - r; if (a < 0) a = -a;
+            a = (p[2] | 0) - r; if (a < 0) a = -a;
             dist += a;
             if (dist < bestd) {
               bestd = dist;
-              best = p[3];
+              best = p[3] | 0;
             }
           }
         }
       }
       if (j >= 0) {
         p = network[j];
-        dist = g - p[1]; // inx key - reverse dif
+        dist = g - (p[1] | 0); // inx key - reverse dif
         if (dist >= bestd) j = -1; // stop iter
         else {
           j--;
           if (dist < 0) dist = -dist;
-          a = p[0] - b; if (a < 0) a = -a;
+          a = (p[0] | 0) - b; if (a < 0) a = -a;
           dist += a;
           if (dist < bestd) {
-            a = p[2] - r; if (a < 0) a = -a;
+            a = (p[2] | 0) - r; if (a < 0) a = -a;
             dist += a;
             if (dist < bestd) {
               bestd = dist;
-              best = p[3];
+              best = p[3] | 0;
             }
           }
         }
