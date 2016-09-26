@@ -23,6 +23,8 @@ class GIF extends EventEmitter
     @options = {}
     @frames = []
 
+    @duplicates = {} # @duplicates[frame.data] == [1, 2, 3] or [4] if not duplicate
+
     @freeWorkers = []
     @activeWorkers = []
 
@@ -38,7 +40,6 @@ class GIF extends EventEmitter
   setOptions: (options) ->
     @setOption key, value for own key, value of options
 
-# TODO: find duplicates in frames.data
   addFrame: (image, options={}) ->
     frame = {}
     frame.transparent = @options.transparent
@@ -63,6 +64,14 @@ class GIF extends EventEmitter
         frame.image = image
     else
       throw new Error 'Invalid image'
+
+    # find duplicates in frames.data
+    index = @frames.length
+    if index > 0 and frame.data? # frame 0 contains header, do not count it
+      if @duplicates[frame.data]?
+        @duplicates[frame.data].push index
+      else
+        @duplicates[frame.data] = [index]
 
     @frames.push frame
 
@@ -106,15 +115,19 @@ class GIF extends EventEmitter
       worker.onmessage = (event) =>
         @activeWorkers.splice @activeWorkers.indexOf(worker), 1
         @freeWorkers.push worker
-        @frameFinished event.data
+        @frameFinished event.data, false
       @freeWorkers.push worker
     return numWorkers
 
-  frameFinished: (frame) ->
+  frameFinished: (frame, duplicate) ->
     console.log "frame #{ frame.index } finished - #{ @activeWorkers.length } active"
     @finishedFrames++
     @emit 'progress', @finishedFrames / @frames.length
-    @imageParts[frame.index] = frame
+    if not duplicate
+      @imageParts[frame.index] = frame
+    else
+      duplicateFirstIndex = @duplicates[frame.data][0]
+      @imageParts[frame.index] = @imageParts[duplicateFirstIndex]
     # remember calculated palette, spawn the rest of the workers
     if @options.globalPalette == true
       @options.globalPalette = frame.globalPalette
@@ -151,6 +164,13 @@ class GIF extends EventEmitter
     return if @nextFrame >= @frames.length # no new frame to render
 
     frame = @frames[@nextFrame++]
+
+    # check if one of duplicates
+    index = @frames.indexOf frame
+    if frame.data? and @duplicates[frame.data]? and @duplicates[frame.data][0] != index
+      @frameFinished frame, true
+      return
+
     worker = @freeWorkers.shift()
     task = @getTask frame
 
