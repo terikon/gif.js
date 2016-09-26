@@ -6,10 +6,13 @@
   "main": "index.js",
   "repository": "https://github.com/jnordberg/gif.js.git",
   "devDependencies": {
-    "commonjs-everywhere": "~0.9.4"
+    "webpack": "^1.13.2",
+    "coffee-script": "^1.11.0",
+    "coffee-loader": "^0.7.2",
+    "webpack-merge": "^0.14.1"
   },
   "scripts": {
-    "prepublish": "./bin/build"
+    "prepublish": "webpack --config build/webpack.main.config.js && webpack --config build/webpack.worker.config.js"
   },
   "browser": "./dist/gif.js",
   "keywords": [

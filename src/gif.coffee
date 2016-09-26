@@ -38,6 +38,7 @@ class GIF extends EventEmitter
   setOptions: (options) ->
     @setOption key, value for own key, value of options
 
+# TODO: find duplicates in frames.data
   addFrame: (image, options={}) ->
     frame = {}
     frame.transparent = @options.transparent
