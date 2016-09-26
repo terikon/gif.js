@@ -256,6 +256,7 @@ GIFEncoder.prototype.analyzePixels = function() {
 
 /*
   Index pixels, without dithering
+  This method is most expensive (75% of time) because of calls to findClosestRGB, and findClosestRGB should be optimized.
 */
 GIFEncoder.prototype.indexPixels = function(imgq) {
   var nPix = this.pixels.length / 3;
@@ -375,6 +376,7 @@ GIFEncoder.prototype.findClosest = function(c, used) {
   return this.findClosestRGB((c & 0xFF0000) >> 16, (c & 0x00FF00) >> 8, (c & 0x0000FF), used);
 };
 
+// Should be heavily optimized
 GIFEncoder.prototype.findClosestRGB = function(r, g, b, used) {
   if (this.colorTab === null) return -1;
 
