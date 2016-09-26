@@ -1,5 +1,1328 @@
-(function(b){function a(b,d){if({}.hasOwnProperty.call(a.cache,b))return a.cache[b];var e=a.resolve(b);if(!e)throw new Error('Failed to resolve module '+b);var c={id:b,require:a,filename:b,exports:{},loaded:!1,parent:d,children:[]};d&&d.children.push(c);var f=b.slice(0,b.lastIndexOf('/')+1);return a.cache[b]=c.exports,e.call(c.exports,c,c.exports,f,b),c.loaded=!0,a.cache[b]=c.exports}a.modules={},a.cache={},a.resolve=function(b){return{}.hasOwnProperty.call(a.modules,b)?a.modules[b]:void 0},a.define=function(b,c){a.modules[b]=c},a.define('/gif.worker.coffee',function(d,e,f,g){var b,c;b=a('/GIFEncoder.js',d),c=function(a){var c,d,e;return c=new b(a.width,a.height),a.index===0?c.writeHeader():c.firstFrame=!1,c.setRepeat(a.repeat),c.setDelay(a.delay),c.setQuality(a.quality),c.addFrame(a.data),a.last&&c.finish(),d=c.stream(),a.data=d.pages,a.cursor=d.cursor,a.pageSize=d.constructor.pageSize,a.canTransfer?(e=function(c){var d;for(var b=0,e=a.data.length;b<e;++b)d=a.data[b],c.push(d.buffer);return c}.call(this,[]),self.postMessage(a,e)):self.postMessage(a)},self.onmessage=function(a){return c(a.data)}}),a.define('/GIFEncoder.js',function(e,h,i,j){function c(){this.page=-1,this.pages=[],this.newPage()}function b(a,b){this.width=~~a,this.height=~~b,this.transparent=null,this.transIndex=0,this.repeat=-1,this.delay=0,this.image=null,this.pixels=null,this.indexedPixels=null,this.colorDepth=null,this.colorTab=null,this.usedEntry=new Array,this.palSize=7,this.dispose=-1,this.firstFrame=!0,this.sample=10,this.out=new c}var f=a('/TypedNeuQuant.js',e),g=a('/LZWEncoder.js',e);c.pageSize=4096,c.charMap={};for(var d=0;d<256;d++)c.charMap[d]=String.fromCharCode(d);c.prototype.newPage=function(){this.pages[++this.page]=new Uint8Array(c.pageSize),this.cursor=0},c.prototype.getData=function(){var d='';for(var a=0;a<this.pages.length;a++)for(var b=0;b<c.pageSize;b++)d+=c.charMap[this.pages[a][b]];return d},c.prototype.writeByte=function(a){this.cursor>=c.pageSize&&this.newPage(),this.pages[this.page][this.cursor++]=a},c.prototype.writeUTFBytes=function(b){for(var c=b.length,a=0;a<c;a++)this.writeByte(b.charCodeAt(a))},c.prototype.writeBytes=function(b,d,e){for(var c=e||b.length,a=d||0;a<c;a++)this.writeByte(b[a])},b.prototype.setDelay=function(a){this.delay=Math.round(a/10)},b.prototype.setFrameRate=function(a){this.delay=Math.round(100/a)},b.prototype.setDispose=function(a){a>=0&&(this.dispose=a)},b.prototype.setRepeat=function(a){this.repeat=a},b.prototype.setTransparent=function(a){this.transparent=a},b.prototype.addFrame=function(a){this.image=a,this.getImagePixels(),this.analyzePixels(),this.firstFrame&&(this.writeLSD(),this.writePalette(),this.repeat>=0&&this.writeNetscapeExt()),this.writeGraphicCtrlExt(),this.writeImageDesc(),this.firstFrame||this.writePalette(),this.writePixels(),this.firstFrame=!1},b.prototype.finish=function(){this.out.writeByte(59)},b.prototype.setQuality=function(a){a<1&&(a=1),this.sample=a},b.prototype.writeHeader=function(){this.out.writeUTFBytes('GIF89a')},b.prototype.analyzePixels=function(){var g=this.pixels.length,d=g/3;this.indexedPixels=new Uint8Array(d);var a=new f(this.pixels,this.sample);a.buildColormap(),this.colorTab=a.getColormap();var b=0;for(var c=0;c<d;c++){var e=a.lookupRGB(this.pixels[b++]&255,this.pixels[b++]&255,this.pixels[b++]&255);this.usedEntry[e]=!0,this.indexedPixels[c]=e}this.pixels=null,this.colorDepth=8,this.palSize=7,this.transparent!==null&&(this.transIndex=this.findClosest(this.transparent))},b.prototype.findClosest=function(e){if(this.colorTab===null)return-1;var k=(e&16711680)>>16,l=(e&65280)>>8,m=e&255,c=0,d=16777216,j=this.colorTab.length;for(var a=0;a<j;){var f=k-(this.colorTab[a++]&255),g=l-(this.colorTab[a++]&255),h=m-(this.colorTab[a]&255),i=f*f+g*g+h*h,b=a/3;this.usedEntry[b]&&i<d&&(d=i,c=b),a++}return c},b.prototype.getImagePixels=function(){var a=this.width,g=this.height;this.pixels=new Uint8Array(a*g*3);var b=this.image,c=0;for(var d=0;d<g;d++)for(var e=0;e<a;e++){var f=d*a*4+e*4;this.pixels[c++]=b[f],this.pixels[c++]=b[f+1],this.pixels[c++]=b[f+2]}},b.prototype.writeGraphicCtrlExt=function(){this.out.writeByte(33),this.out.writeByte(249),this.out.writeByte(4);var b,a;this.transparent===null?(b=0,a=0):(b=1,a=2),this.dispose>=0&&(a=dispose&7),a<<=2,this.out.writeByte(0|a|0|b),this.writeShort(this.delay),this.out.writeByte(this.transIndex),this.out.writeByte(0)},b.prototype.writeImageDesc=function(){this.out.writeByte(44),this.writeShort(0),this.writeShort(0),this.writeShort(this.width),this.writeShort(this.height),this.firstFrame?this.out.writeByte(0):this.out.writeByte(128|this.palSize)},b.prototype.writeLSD=function(){this.writeShort(this.width),this.writeShort(this.height),this.out.writeByte(240|this.palSize),this.out.writeByte(0),this.out.writeByte(0)},b.prototype.writeNetscapeExt=function(){this.out.writeByte(33),this.out.writeByte(255),this.out.writeByte(11),this.out.writeUTFBytes('NETSCAPE2.0'),this.out.writeByte(3),this.out.writeByte(1),this.writeShort(this.repeat),this.out.writeByte(0)},b.prototype.writePalette=function(){this.out.writeBytes(this.colorTab);var b=768-this.colorTab.length;for(var a=0;a<b;a++)this.out.writeByte(0)},b.prototype.writeShort=function(a){this.out.writeByte(a&255),this.out.writeByte(a>>8&255)},b.prototype.writePixels=function(){var a=new g(this.width,this.height,this.indexedPixels,this.colorDepth);a.encode(this.out)},b.prototype.stream=function(){return this.out},e.exports=b}),a.define('/LZWEncoder.js',function(e,g,h,i){function f(y,D,C,B){function w(a,b){r[f++]=a,f>=254&&t(b)}function x(b){u(a),k=i+2,j=!0,l(i,b)}function u(b){for(var a=0;a<b;++a)h[a]=-1}function A(z,r){var g,t,d,e,y,w,s;for(q=z,j=!1,n_bits=q,m=p(n_bits),i=1<<z-1,o=i+1,k=i+2,f=0,e=v(),s=0,g=a;g<65536;g*=2)++s;s=8-s,w=a,u(w),l(i,r);a:while((t=v())!=c){if(g=(t<<b)+e,d=t<<s^e,h[d]===g){e=n[d];continue}if(h[d]>=0){y=w-d,d===0&&(y=1);do if((d-=y)<0&&(d+=w),h[d]===g){e=n[d];continue a}while(h[d]>=0)}l(e,r),e=t,k<1<<b?(n[d]=k++,h[d]=g):x(r)}l(e,r),l(o,r)}function z(a){a.writeByte(s),remaining=y*D,curPixel=0,A(s+1,a),a.writeByte(0)}function t(a){f>0&&(a.writeByte(f),a.writeBytes(r,0,f),f=0)}function p(a){return(1<<a)-1}function v(){if(remaining===0)return c;--remaining;var a=C[curPixel++];return a&255}function l(a,c){g&=d[e],e>0?g|=a<<e:g=a,e+=n_bits;while(e>=8)w(g&255,c),g>>=8,e-=8;if((k>m||j)&&(j?(m=p(n_bits=q),j=!1):(++n_bits,n_bits==b?m=1<<b:m=p(n_bits))),a==o){while(e>0)w(g&255,c),g>>=8,e-=8;t(c)}}var s=Math.max(2,B),r=new Uint8Array(256),h=new Int32Array(a),n=new Int32Array(a),g,e=0,f,k=0,m,j=!1,q,i,o;this.encode=z}var c=-1,b=12,a=5003,d=[0,1,3,7,15,31,63,127,255,511,1023,2047,4095,8191,16383,32767,65535];e.exports=f}),a.define('/TypedNeuQuant.js',function(A,F,E,D){function C(A,B){function I(){o=[],q=new Int32Array(256),t=new Int32Array(a),y=new Int32Array(a),z=new Int32Array(a>>3);var c,d;for(c=0;c<a;c++)d=(c<<b+8)/a,o[c]=new Float64Array([d,d,d,0]),y[c]=e/a,t[c]=0}function J(){for(var c=0;c<a;c++)o[c][0]>>=b,o[c][1]>>=b,o[c][2]>>=b,o[c][3]=c}function K(b,a,c,e,f){o[a][0]-=b*(o[a][0]-c)/d,o[a][1]-=b*(o[a][1]-e)/d,o[a][2]-=b*(o[a][2]-f)/d}function L(j,e,n,l,k){var h=Math.abs(e-j),i=Math.min(e+j,a),g=e+1,f=e-1,m=1,b,d;while(g<i||f>h)d=z[m++],g<i&&(b=o[g++],b[0]-=d*(b[0]-n)/c,b[1]-=d*(b[1]-l)/c,b[2]-=d*(b[2]-k)/c),f>h&&(b=o[f--],b[0]-=d*(b[0]-n)/c,b[1]-=d*(b[1]-l)/c,b[2]-=d*(b[2]-k)/c)}function C(p,s,q){var h=2147483647,k=h,d=-1,m=d,c,j,e,n,l;for(c=0;c<a;c++)j=o[c],e=Math.abs(j[0]-p)+Math.abs(j[1]-s)+Math.abs(j[2]-q),e<h&&(h=e,d=c),n=e-(t[c]>>i-b),n<k&&(k=n,m=c),l=y[c]>>g,y[c]-=l,t[c]+=l<<f;return y[d]+=x,t[d]-=r,m}function D(){var d,b,e,c,h,g,f=0,i=0;for(d=0;d<a;d++){for(e=o[d],h=d,g=e[1],b=d+1;b<a;b++)c=o[b],c[1]<g&&(h=b,g=c[1]);if(c=o[h],d!=h&&(b=c[0],c[0]=e[0],e[0]=b,b=c[1],c[1]=e[1],e[1]=b,b=c[2],c[2]=e[2],e[2]=b,b=c[3],c[3]=e[3],e[3]=b),g!=f){for(q[f]=i+d>>1,b=f+1;b<g;b++)q[b]=d;f=g,i=d}}for(q[f]=i+n>>1,b=f+1;b<256;b++)q[b]=n}function E(j,i,k){var b,d,c,e=1e3,h=-1,f=q[i],g=f-1;while(f<a||g>=0)f<a&&(d=o[f],c=d[1]-i,c>=e?f=a:(f++,c<0&&(c=-c),b=d[0]-j,b<0&&(b=-b),c+=b,c<e&&(b=d[2]-k,b<0&&(b=-b),c+=b,c<e&&(e=c,h=d[3])))),g>=0&&(d=o[g],c=i-d[1],c>=e?g=-1:(g--,c<0&&(c=-c),b=d[0]-j,b<0&&(b=-b),c+=b,c<e&&(b=d[2]-k,b<0&&(b=-b),c+=b,c<e&&(e=c,h=d[3]))));return h}function F(){var c,f=A.length,D=30+(B-1)/3,y=f/(3*B),q=~~(y/w),n=d,o=u,a=o>>h;for(a<=1&&(a=0),c=0;c<a;c++)z[c]=n*((a*a-c*c)*m/(a*a));var i;f<s?(B=1,i=3):f%l!==0?i=3*l:f%k!==0?i=3*k:f%p!==0?i=3*p:i=3*j;var r,t,x,e,g=0;c=0;while(c<y)if(r=(A[g]&255)<<b,t=(A[g+1]&255)<<b,x=(A[g+2]&255)<<b,e=C(r,t,x),K(n,e,r,t,x),a!==0&&L(a,e,r,t,x),g+=i,g>=f&&(g-=f),c++,q===0&&(q=1),c%q===0)for(n-=n/D,o-=o/v,a=o>>h,a<=1&&(a=0),e=0;e<a;e++)z[e]=n*((a*a-e*e)*m/(a*a))}function G(){I(),F(),J(),D()}function H(){var b=[],g=[];for(var c=0;c<a;c++)g[o[c][3]]=c;var d=0;for(var e=0;e<a;e++){var f=g[e];b[d++]=o[f][0],b[d++]=o[f][1],b[d++]=o[f][2]}return b}var o,q,t,y,z;this.buildColormap=G,this.getColormap=H,this.lookupRGB=E}var w=100,a=256,n=a-1,b=4,i=16,e=1<<i,f=10,B=1<<f,g=10,x=e>>g,r=e<<f-g,z=a>>3,h=6,t=1<<h,u=z*t,v=30,o=10,d=1<<o,q=8,m=1<<q,y=o+q,c=1<<y,l=499,k=491,p=487,j=503,s=3*j;A.exports=C}),a('/gif.worker.coffee')}.call(this,this))
-/*
-//@ sourceMappingURL=gif.worker.js.map
-*/
-// gif.worker.js 0.1.2 - https://github.com/jnordberg/gif.js
+/******/ (function(modules) { // webpackBootstrap
+/******/ 	// The module cache
+/******/ 	var installedModules = {};
+/******/
+/******/ 	// The require function
+/******/ 	function __webpack_require__(moduleId) {
+/******/
+/******/ 		// Check if module is in cache
+/******/ 		if(installedModules[moduleId])
+/******/ 			return installedModules[moduleId].exports;
+/******/
+/******/ 		// Create a new module (and put it into the cache)
+/******/ 		var module = installedModules[moduleId] = {
+/******/ 			exports: {},
+/******/ 			id: moduleId,
+/******/ 			loaded: false
+/******/ 		};
+/******/
+/******/ 		// Execute the module function
+/******/ 		modules[moduleId].call(module.exports, module, module.exports, __webpack_require__);
+/******/
+/******/ 		// Flag the module as loaded
+/******/ 		module.loaded = true;
+/******/
+/******/ 		// Return the exports of the module
+/******/ 		return module.exports;
+/******/ 	}
+/******/
+/******/
+/******/ 	// expose the modules object (__webpack_modules__)
+/******/ 	__webpack_require__.m = modules;
+/******/
+/******/ 	// expose the module cache
+/******/ 	__webpack_require__.c = installedModules;
+/******/
+/******/ 	// __webpack_public_path__
+/******/ 	__webpack_require__.p = "";
+/******/
+/******/ 	// Load entry module and return exports
+/******/ 	return __webpack_require__(0);
+/******/ })
+/************************************************************************/
+/******/ ([
+/* 0 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var GIFEncoder, renderFrame;
+	
+	GIFEncoder = __webpack_require__(1);
+	
+	renderFrame = function(frame) {
+	  var encoder, page, stream, transfer;
+	  encoder = new GIFEncoder(frame.width, frame.height);
+	  if (frame.index === 0) {
+	    encoder.writeHeader();
+	  } else {
+	    encoder.firstFrame = false;
+	  }
+	  encoder.setTransparent(frame.transparent);
+	  encoder.setRepeat(frame.repeat);
+	  encoder.setDelay(frame.delay);
+	  encoder.setQuality(frame.quality);
+	  encoder.setDither(frame.dither);
+	  encoder.setGlobalPalette(frame.globalPalette);
+	  encoder.addFrame(frame.data);
+	  if (frame.last) {
+	    encoder.finish();
+	  }
+	  if (frame.globalPalette === true) {
+	    frame.globalPalette = encoder.getGlobalPalette();
+	  }
+	  stream = encoder.stream();
+	  frame.data = stream.pages;
+	  frame.cursor = stream.cursor;
+	  frame.pageSize = stream.constructor.pageSize;
+	  if (frame.canTransfer) {
+	    transfer = (function() {
+	      var i, len, ref, results;
+	      ref = frame.data;
+	      results = [];
+	      for (i = 0, len = ref.length; i < len; i++) {
+	        page = ref[i];
+	        results.push(page.buffer);
+	      }
+	      return results;
+	    })();
+	    return self.postMessage(frame, transfer);
+	  } else {
+	    return self.postMessage(frame);
+	  }
+	};
+	
+	self.onmessage = function(event) {
+	  return renderFrame(event.data);
+	};
+
+
+/***/ },
+/* 1 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/*
+	  GIFEncoder.js
+	
+	  Authors
+	  Kevin Weiner (original Java version - kweiner@fmsware.com)
+	  Thibault Imbert (AS3 version - bytearray.org)
+	  Johan Nordberg (JS version - code@johan-nordberg.com)
+	*/
+	
+	var NeuQuant = __webpack_require__(2);
+	var LZWEncoder = __webpack_require__(3);
+	
+	function ByteArray() {
+	  this.page = -1;
+	  this.pages = [];
+	  this.newPage();
+	}
+	
+	ByteArray.pageSize = 4096;
+	ByteArray.charMap = {};
+	
+	for (var i = 0; i < 256; i++)
+	  ByteArray.charMap[i] = String.fromCharCode(i);
+	
+	ByteArray.prototype.newPage = function() {
+	  this.pages[++this.page] = new Uint8Array(ByteArray.pageSize);
+	  this.cursor = 0;
+	};
+	
+	ByteArray.prototype.getData = function() {
+	  var rv = '';
+	  for (var p = 0; p < this.pages.length; p++) {
+	    for (var i = 0; i < ByteArray.pageSize; i++) {
+	      rv += ByteArray.charMap[this.pages[p][i]];
+	    }
+	  }
+	  return rv;
+	};
+	
+	ByteArray.prototype.writeByte = function(val) {
+	  if (this.cursor >= ByteArray.pageSize) this.newPage();
+	  this.pages[this.page][this.cursor++] = val;
+	};
+	
+	ByteArray.prototype.writeUTFBytes = function(string) {
+	  for (var l = string.length, i = 0; i < l; i++)
+	    this.writeByte(string.charCodeAt(i));
+	};
+	
+	ByteArray.prototype.writeBytes = function(array, offset, length) {
+	  for (var l = length || array.length, i = offset || 0; i < l; i++)
+	    this.writeByte(array[i]);
+	};
+	
+	function GIFEncoder(width, height) {
+	  // image size
+	  this.width = ~~width;
+	  this.height = ~~height;
+	
+	  // transparent color if given
+	  this.transparent = null;
+	
+	  // transparent index in color table
+	  this.transIndex = 0;
+	
+	  // -1 = no repeat, 0 = forever. anything else is repeat count
+	  this.repeat = -1;
+	
+	  // frame delay (hundredths)
+	  this.delay = 0;
+	
+	  this.image = null; // current frame
+	  this.pixels = null; // BGR byte array from frame
+	  this.indexedPixels = null; // converted frame indexed to palette
+	  this.colorDepth = null; // number of bit planes
+	  this.colorTab = null; // RGB palette
+	  this.neuQuant = null; // NeuQuant instance that was used to generate this.colorTab.
+	  this.usedEntry = new Array(); // active palette entries
+	  this.palSize = 7; // color table size (bits-1)
+	  this.dispose = -1; // disposal code (-1 = use default)
+	  this.firstFrame = true;
+	  this.sample = 10; // default sample interval for quantizer
+	  this.dither = false; // default dithering
+	  this.globalPalette = false;
+	
+	  this.out = new ByteArray();
+	}
+	
+	/*
+	  Sets the delay time between each frame, or changes it for subsequent frames
+	  (applies to last frame added)
+	*/
+	GIFEncoder.prototype.setDelay = function(milliseconds) {
+	  this.delay = Math.round(milliseconds / 10);
+	};
+	
+	/*
+	  Sets frame rate in frames per second.
+	*/
+	GIFEncoder.prototype.setFrameRate = function(fps) {
+	  this.delay = Math.round(100 / fps);
+	};
+	
+	/*
+	  Sets the GIF frame disposal code for the last added frame and any
+	  subsequent frames.
+	
+	  Default is 0 if no transparent color has been set, otherwise 2.
+	*/
+	GIFEncoder.prototype.setDispose = function(disposalCode) {
+	  if (disposalCode >= 0) this.dispose = disposalCode;
+	};
+	
+	/*
+	  Sets the number of times the set of GIF frames should be played.
+	
+	  -1 = play once
+	  0 = repeat indefinitely
+	
+	  Default is -1
+	
+	  Must be invoked before the first image is added
+	*/
+	
+	GIFEncoder.prototype.setRepeat = function(repeat) {
+	  this.repeat = repeat;
+	};
+	
+	/*
+	  Sets the transparent color for the last added frame and any subsequent
+	  frames. Since all colors are subject to modification in the quantization
+	  process, the color in the final palette for each frame closest to the given
+	  color becomes the transparent color for that frame. May be set to null to
+	  indicate no transparent color.
+	*/
+	GIFEncoder.prototype.setTransparent = function(color) {
+	  this.transparent = color;
+	};
+	
+	/*
+	  Adds next GIF frame. The frame is not written immediately, but is
+	  actually deferred until the next frame is received so that timing
+	  data can be inserted.  Invoking finish() flushes all frames.
+	*/
+	GIFEncoder.prototype.addFrame = function(imageData) {
+	  this.image = imageData;
+	
+	  this.colorTab = this.globalPalette && this.globalPalette.slice ? this.globalPalette : null;
+	
+	  this.getImagePixels(); // convert to correct format if necessary
+	  this.analyzePixels(); // build color table & map pixels
+	
+	  if (this.globalPalette === true) this.globalPalette = this.colorTab;
+	
+	  if (this.firstFrame) {
+	    this.writeLSD(); // logical screen descriptior
+	    this.writePalette(); // global color table
+	    if (this.repeat >= 0) {
+	      // use NS app extension to indicate reps
+	      this.writeNetscapeExt();
+	    }
+	  }
+	
+	  this.writeGraphicCtrlExt(); // write graphic control extension
+	  this.writeImageDesc(); // image descriptor
+	  if (!this.firstFrame && !this.globalPalette) this.writePalette(); // local color table
+	  this.writePixels(); // encode and write pixel data
+	
+	  this.firstFrame = false;
+	};
+	
+	/*
+	  Adds final trailer to the GIF stream, if you don't call the finish method
+	  the GIF stream will not be valid.
+	*/
+	GIFEncoder.prototype.finish = function() {
+	  this.out.writeByte(0x3b); // gif trailer
+	};
+	
+	/*
+	  Sets quality of color quantization (conversion of images to the maximum 256
+	  colors allowed by the GIF specification). Lower values (minimum = 1)
+	  produce better colors, but slow processing significantly. 10 is the
+	  default, and produces good color mapping at reasonable speeds. Values
+	  greater than 20 do not yield significant improvements in speed.
+	*/
+	GIFEncoder.prototype.setQuality = function(quality) {
+	  if (quality < 1) quality = 1;
+	  this.sample = quality;
+	};
+	
+	/*
+	  Sets dithering method. Available are:
+	  - FALSE no dithering
+	  - TRUE or FloydSteinberg
+	  - FalseFloydSteinberg
+	  - Stucki
+	  - Atkinson
+	  You can add '-serpentine' to use serpentine scanning
+	*/
+	GIFEncoder.prototype.setDither = function(dither) {
+	  if (dither === true) dither = 'FloydSteinberg';
+	  this.dither = dither;
+	};
+	
+	/*
+	  Sets global palette for all frames.
+	  You can provide TRUE to create global palette from first picture.
+	  Or an array of r,g,b,r,g,b,...
+	*/
+	GIFEncoder.prototype.setGlobalPalette = function(palette) {
+	  this.globalPalette = palette;
+	};
+	
+	/*
+	  Returns global palette used for all frames.
+	  If setGlobalPalette(true) was used, then this function will return
+	  calculated palette after the first frame is added.
+	*/
+	GIFEncoder.prototype.getGlobalPalette = function() {
+	  return (this.globalPalette && this.globalPalette.slice && this.globalPalette.slice(0)) || this.globalPalette;
+	};
+	
+	/*
+	  Writes GIF file header
+	*/
+	GIFEncoder.prototype.writeHeader = function() {
+	  this.out.writeUTFBytes("GIF89a");
+	};
+	
+	/*
+	  Analyzes current frame colors and creates color map.
+	*/
+	GIFEncoder.prototype.analyzePixels = function() {
+	  if (!this.colorTab) {
+	    this.neuQuant = new NeuQuant(this.pixels, this.sample);
+	    this.neuQuant.buildColormap(); // create reduced palette
+	    this.colorTab = this.neuQuant.getColormap();
+	  }
+	
+	  // map image pixels to new palette
+	  if (this.dither) {
+	    this.ditherPixels(this.dither.replace('-serpentine', ''), this.dither.match(/-serpentine/) !== null);
+	  } else {
+	    this.indexPixels();
+	  }
+	
+	  this.pixels = null;
+	  this.colorDepth = 8;
+	  this.palSize = 7;
+	
+	  // get closest match to transparent color if specified
+	  if (this.transparent !== null) {
+	    this.transIndex = this.findClosest(this.transparent, true);
+	  }
+	};
+	
+	/*
+	  Index pixels, without dithering
+	  This method is most expensive (75% of time) because of calls to findClosestRGB, and findClosestRGB should be optimized.
+	*/
+	GIFEncoder.prototype.indexPixels = function() {
+	  var nPix = this.pixels.length / 3;
+	  this.indexedPixels = new Uint8Array(nPix);
+	  var k = 0;
+	  for (var j = 0; j < nPix; j++) {
+	    var index = this.findClosestRGB(
+	      this.pixels[k++] & 0xff,
+	      this.pixels[k++] & 0xff,
+	      this.pixels[k++] & 0xff
+	    );
+	    this.usedEntry[index] = true;
+	    this.indexedPixels[j] = index;
+	  }
+	};
+	
+	/*
+	  Taken from http://jsbin.com/iXofIji/2/edit by PAEz
+	*/
+	GIFEncoder.prototype.ditherPixels = function(kernel, serpentine) {
+	  var kernels = {
+	    FalseFloydSteinberg: [
+	      [3 / 8, 1, 0],
+	      [3 / 8, 0, 1],
+	      [2 / 8, 1, 1]
+	    ],
+	    FloydSteinberg: [
+	      [7 / 16, 1, 0],
+	      [3 / 16, -1, 1],
+	      [5 / 16, 0, 1],
+	      [1 / 16, 1, 1]
+	    ],
+	    Stucki: [
+	      [8 / 42, 1, 0],
+	      [4 / 42, 2, 0],
+	      [2 / 42, -2, 1],
+	      [4 / 42, -1, 1],
+	      [8 / 42, 0, 1],
+	      [4 / 42, 1, 1],
+	      [2 / 42, 2, 1],
+	      [1 / 42, -2, 2],
+	      [2 / 42, -1, 2],
+	      [4 / 42, 0, 2],
+	      [2 / 42, 1, 2],
+	      [1 / 42, 2, 2]
+	    ],
+	    Atkinson: [
+	      [1 / 8, 1, 0],
+	      [1 / 8, 2, 0],
+	      [1 / 8, -1, 1],
+	      [1 / 8, 0, 1],
+	      [1 / 8, 1, 1],
+	      [1 / 8, 0, 2]
+	    ]
+	  };
+	
+	  if (!kernel || !kernels[kernel]) {
+	    throw 'Unknown dithering kernel: ' + kernel;
+	  }
+	
+	  var ds = kernels[kernel];
+	  var index = 0,
+	    height = this.height,
+	    width = this.width,
+	    data = this.pixels;
+	  var direction = serpentine ? -1 : 1;
+	
+	  this.indexedPixels = new Uint8Array(this.pixels.length / 3);
+	
+	  for (var y = 0; y < height; y++) {
+	
+	    if (serpentine) direction = direction * -1;
+	
+	    for (var x = (direction == 1 ? 0 : width - 1), xend = (direction == 1 ? width : 0); x !== xend; x += direction) {
+	
+	      index = (y * width) + x;
+	      // Get original colour
+	      var idx = index * 3;
+	      var r1 = data[idx];
+	      var g1 = data[idx + 1];
+	      var b1 = data[idx + 2];
+	
+	      // Get converted colour
+	      idx = this.findClosestRGB(r1, g1, b1);
+	      this.usedEntry[idx] = true;
+	      this.indexedPixels[index] = idx;
+	      idx *= 3;
+	      var r2 = this.colorTab[idx];
+	      var g2 = this.colorTab[idx + 1];
+	      var b2 = this.colorTab[idx + 2];
+	
+	      var er = r1 - r2;
+	      var eg = g1 - g2;
+	      var eb = b1 - b2;
+	
+	      for (var i = (direction == 1 ? 0: ds.length - 1), end = (direction == 1 ? ds.length : 0); i !== end; i += direction) {
+	        var x1 = ds[i][1]; // *direction;  //  Should this by timesd by direction?..to make the kernel go in the opposite direction....got no idea....
+	        var y1 = ds[i][2];
+	        if (x1 + x >= 0 && x1 + x < width && y1 + y >= 0 && y1 + y < height) {
+	          var d = ds[i][0];
+	          idx = index + x1 + (y1 * width);
+	          idx *= 3;
+	
+	          data[idx] = Math.max(0, Math.min(255, data[idx] + er * d));
+	          data[idx + 1] = Math.max(0, Math.min(255, data[idx + 1] + eg * d));
+	          data[idx + 2] = Math.max(0, Math.min(255, data[idx + 2] + eb * d));
+	        }
+	      }
+	    }
+	  }
+	};
+	
+	/*
+	  Returns index of palette color closest to c
+	*/
+	GIFEncoder.prototype.findClosest = function(c, used) {
+	  return this.findClosestRGB((c & 0xFF0000) >> 16, (c & 0x00FF00) >> 8, (c & 0x0000FF), used);
+	};
+	
+	// Should be heavily optimized
+	GIFEncoder.prototype.findClosestRGB = function(r, g, b, used) {
+	  if (this.colorTab === null) return -1;
+	
+	  if (this.neuQuant && !used) {
+	    return this.neuQuant.lookupRGB(r, g, b);
+	  }
+	  
+	  var c = b | (g << 8) | (r << 16);
+	
+	  var minpos = 0;
+	  var dmin = 256 * 256 * 256;
+	  var len = this.colorTab.length;
+	
+	  for (var i = 0, index = 0; i < len; index++) {
+	    var dr = r - (this.colorTab[i++] & 0xff);
+	    var dg = g - (this.colorTab[i++] & 0xff);
+	    var db = b - (this.colorTab[i++] & 0xff);
+	    var d = dr * dr + dg * dg + db * db;
+	    if ((!used || this.usedEntry[index]) && (d < dmin)) {
+	      dmin = d;
+	      minpos = index;
+	    }
+	  }
+	
+	  return minpos;
+	};
+	
+	/*
+	  Extracts image pixels into byte array pixels
+	  (removes alphachannel from canvas imagedata)
+	*/
+	GIFEncoder.prototype.getImagePixels = function() {
+	  var w = this.width;
+	  var h = this.height;
+	  this.pixels = new Uint8Array(w * h * 3);
+	
+	  var data = this.image;
+	  var srcPos = 0;
+	  var count = 0;
+	
+	  for (var i = 0; i < h; i++) {
+	    for (var j = 0; j < w; j++) {
+	      this.pixels[count++] = data[srcPos++];
+	      this.pixels[count++] = data[srcPos++];
+	      this.pixels[count++] = data[srcPos++];
+	      srcPos++;
+	    }
+	  }
+	};
+	
+	/*
+	  Writes Graphic Control Extension
+	*/
+	GIFEncoder.prototype.writeGraphicCtrlExt = function() {
+	  this.out.writeByte(0x21); // extension introducer
+	  this.out.writeByte(0xf9); // GCE label
+	  this.out.writeByte(4); // data block size
+	
+	  var transp, disp;
+	  if (this.transparent === null) {
+	    transp = 0;
+	    disp = 0; // dispose = no action
+	  } else {
+	    transp = 1;
+	    disp = 2; // force clear if using transparent color
+	  }
+	
+	  if (this.dispose >= 0) {
+	    disp = dispose & 7; // user override
+	  }
+	  disp <<= 2;
+	
+	  // packed fields
+	  this.out.writeByte(
+	    0 | // 1:3 reserved
+	    disp | // 4:6 disposal
+	    0 | // 7 user input - 0 = none
+	    transp // 8 transparency flag
+	  );
+	
+	  this.writeShort(this.delay); // delay x 1/100 sec
+	  this.out.writeByte(this.transIndex); // transparent color index
+	  this.out.writeByte(0); // block terminator
+	};
+	
+	/*
+	  Writes Image Descriptor
+	*/
+	GIFEncoder.prototype.writeImageDesc = function() {
+	  this.out.writeByte(0x2c); // image separator
+	  this.writeShort(0); // image position x,y = 0,0
+	  this.writeShort(0);
+	  this.writeShort(this.width); // image size
+	  this.writeShort(this.height);
+	
+	  // packed fields
+	  if (this.firstFrame || this.globalPalette) {
+	    // no LCT - GCT is used for first (or only) frame
+	    this.out.writeByte(0);
+	  } else {
+	    // specify normal LCT
+	    this.out.writeByte(
+	      0x80 | // 1 local color table 1=yes
+	      0 | // 2 interlace - 0=no
+	      0 | // 3 sorted - 0=no
+	      0 | // 4-5 reserved
+	      this.palSize // 6-8 size of color table
+	    );
+	  }
+	};
+	
+	/*
+	  Writes Logical Screen Descriptor
+	*/
+	GIFEncoder.prototype.writeLSD = function() {
+	  // logical screen size
+	  this.writeShort(this.width);
+	  this.writeShort(this.height);
+	
+	  // packed fields
+	  this.out.writeByte(
+	    0x80 | // 1 : global color table flag = 1 (gct used)
+	    0x70 | // 2-4 : color resolution = 7
+	    0x00 | // 5 : gct sort flag = 0
+	    this.palSize // 6-8 : gct size
+	  );
+	
+	  this.out.writeByte(0); // background color index
+	  this.out.writeByte(0); // pixel aspect ratio - assume 1:1
+	};
+	
+	/*
+	  Writes Netscape application extension to define repeat count.
+	*/
+	GIFEncoder.prototype.writeNetscapeExt = function() {
+	  this.out.writeByte(0x21); // extension introducer
+	  this.out.writeByte(0xff); // app extension label
+	  this.out.writeByte(11); // block size
+	  this.out.writeUTFBytes('NETSCAPE2.0'); // app id + auth code
+	  this.out.writeByte(3); // sub-block size
+	  this.out.writeByte(1); // loop sub-block id
+	  this.writeShort(this.repeat); // loop count (extra iterations, 0=repeat forever)
+	  this.out.writeByte(0); // block terminator
+	};
+	
+	/*
+	  Writes color table
+	*/
+	GIFEncoder.prototype.writePalette = function() {
+	  this.out.writeBytes(this.colorTab);
+	  var n = (3 * 256) - this.colorTab.length;
+	  for (var i = 0; i < n; i++)
+	    this.out.writeByte(0);
+	};
+	
+	GIFEncoder.prototype.writeShort = function(pValue) {
+	  this.out.writeByte(pValue & 0xFF);
+	  this.out.writeByte((pValue >> 8) & 0xFF);
+	};
+	
+	/*
+	  Encodes and writes pixel data
+	*/
+	GIFEncoder.prototype.writePixels = function() {
+	  var enc = new LZWEncoder(this.width, this.height, this.indexedPixels, this.colorDepth);
+	  enc.encode(this.out);
+	};
+	
+	/*
+	  Retrieves the GIF stream
+	*/
+	GIFEncoder.prototype.stream = function() {
+	  return this.out;
+	};
+	
+	module.exports = GIFEncoder;
+
+
+/***/ },
+/* 2 */
+/***/ function(module, exports) {
+
+	/* NeuQuant Neural-Net Quantization Algorithm
+	 * ------------------------------------------
+	 *
+	 * Copyright (c) 1994 Anthony Dekker
+	 *
+	 * NEUQUANT Neural-Net quantization algorithm by Anthony Dekker, 1994.
+	 * See "Kohonen neural networks for optimal colour quantization"
+	 * in "Network: Computation in Neural Systems" Vol. 5 (1994) pp 351-367.
+	 * for a discussion of the algorithm.
+	 * See also  http://members.ozemail.com.au/~dekker/NEUQUANT.HTML
+	 *
+	 * Any party obtaining a copy of these files from the author, directly or
+	 * indirectly, is granted, free of charge, a full and unrestricted irrevocable,
+	 * world-wide, paid up, royalty-free, nonexclusive right and license to deal
+	 * in this software and documentation files (the "Software"), including without
+	 * limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+	 * and/or sell copies of the Software, and to permit persons who receive
+	 * copies from any such party to do so, with the only requirement being
+	 * that this copyright notice remain intact.
+	 *
+	 * (JavaScript port 2012 by Johan Nordberg)
+	 *
+	 * Micro-optimization
+	 *  Roman Viskin (npm@terikon.com)
+	 */
+	
+	var ncycles = 100; // number of learning cycles
+	var netsize = 256; // number of colors used
+	var maxnetpos = netsize - 1;
+	
+	// defs for freq and bias
+	var netbiasshift = 4; // bias for colour values
+	var intbiasshift = 16; // bias for fractions
+	var intbias = (1 << intbiasshift);
+	var gammashift = 10;
+	var gamma = (1 << gammashift);
+	var betashift = 10;
+	var beta = (intbias >> betashift); /* beta = 1/1024 */
+	var betagamma = (intbias << (gammashift - betashift));
+	
+	// defs for decreasing radius factor
+	var initrad = (netsize >> 3); // for 256 cols, radius starts
+	var radiusbiasshift = 6; // at 32.0 biased by 6 bits
+	var radiusbias = (1 << radiusbiasshift);
+	var initradius = (initrad * radiusbias); //and decreases by a
+	var radiusdec = 30; // factor of 1/30 each cycle
+	
+	// defs for decreasing alpha factor
+	var alphabiasshift = 10; // alpha starts at 1.0
+	var initalpha = (1 << alphabiasshift);
+	var alphadec; // biased by 10 bits
+	
+	/* radbias and alpharadbias used for radpower calculation */
+	var radbiasshift = 8;
+	var radbias = (1 << radbiasshift);
+	var alpharadbshift = (alphabiasshift + radbiasshift);
+	var alpharadbias = (1 << alpharadbshift);
+	
+	// four primes near 500 - assume no image has a length so large that it is
+	// divisible by all four primes
+	var prime1 = 499;
+	var prime2 = 491;
+	var prime3 = 487;
+	var prime4 = 503;
+	var minpicturebytes = (3 * prime4);
+	
+	/*
+	  Constructor: NeuQuant
+	
+	  Arguments:
+	
+	  pixels - array of pixels in RGB format
+	  samplefac - sampling factor 1 to 30 where lower is better quality
+	
+	  >
+	  > pixels = [r, g, b, r, g, b, r, g, b, ..]
+	  >
+	*/
+	function NeuQuant(pixels, samplefac) {
+	  var network; // int[netsize][4]
+	  var netindex; // for network lookup - really 256
+	
+	  // bias and freq arrays for learning
+	  var bias;
+	  var freq;
+	  var radpower;
+	
+	  /*
+	    Private Method: init
+	
+	    sets up arrays
+	  */
+	  function init() {
+	    network = [];
+	    netindex = new Int32Array(256);
+	    bias = new Int32Array(netsize);
+	    freq = new Int32Array(netsize);
+	    radpower = new Int32Array(netsize >> 3);
+	
+	    var i, v;
+	    for (i = 0; i < netsize; i++) {
+	      v = (i << (netbiasshift + 8)) / netsize;
+	      network[i] = new Float64Array([v, v, v, 0]);
+	      //network[i] = [v, v, v, 0]
+	      freq[i] = intbias / netsize;
+	      bias[i] = 0;
+	    }
+	  }
+	
+	  /*
+	    Private Method: unbiasnet
+	
+	    unbiases network to give byte values 0..255 and record position i to prepare for sort
+	  */
+	  function unbiasnet() {
+	    for (var i = 0; i < netsize; i++) {
+	      network[i][0] >>= netbiasshift;
+	      network[i][1] >>= netbiasshift;
+	      network[i][2] >>= netbiasshift;
+	      network[i][3] = i; // record color number
+	    }
+	  }
+	
+	  /*
+	    Private Method: altersingle
+	
+	    moves neuron *i* towards biased (b,g,r) by factor *alpha*
+	  */
+	  function altersingle(alpha, i, b, g, r) {
+	    network[i][0] -= (alpha * (network[i][0] - b)) / initalpha;
+	    network[i][1] -= (alpha * (network[i][1] - g)) / initalpha;
+	    network[i][2] -= (alpha * (network[i][2] - r)) / initalpha;
+	  }
+	
+	  /*
+	    Private Method: alterneigh
+	
+	    moves neurons in *radius* around index *i* towards biased (b,g,r) by factor *alpha*
+	  */
+	  function alterneigh(radius, i, b, g, r) {
+	    var lo = Math.abs(i - radius);
+	    var hi = Math.min(i + radius, netsize);
+	
+	    var j = i + 1;
+	    var k = i - 1;
+	    var m = 1;
+	
+	    var p, a;
+	    while ((j < hi) || (k > lo)) {
+	      a = radpower[m++];
+	
+	      if (j < hi) {
+	        p = network[j++];
+	        p[0] -= (a * (p[0] - b)) / alpharadbias;
+	        p[1] -= (a * (p[1] - g)) / alpharadbias;
+	        p[2] -= (a * (p[2] - r)) / alpharadbias;
+	      }
+	
+	      if (k > lo) {
+	        p = network[k--];
+	        p[0] -= (a * (p[0] - b)) / alpharadbias;
+	        p[1] -= (a * (p[1] - g)) / alpharadbias;
+	        p[2] -= (a * (p[2] - r)) / alpharadbias;
+	      }
+	    }
+	  }
+	
+	  /*
+	    Private Method: contest
+	
+	    searches for biased BGR values
+	    should be heavily optimized
+	  */
+	  function contest(b, g, r) {
+	    /*
+	      finds closest neuron (min dist) and updates freq
+	      finds best neuron (min dist-bias) and returns position
+	      for frequently chosen neurons, freq[i] is high and bias[i] is negative
+	      bias[i] = gamma * ((1 / netsize) - freq[i])
+	    */
+	
+	    b = b | 0;
+	    g = g | 0;
+	    r = r | 0;
+	
+	    var bestd = ~(1 << 31);
+	    var bestbiasd = bestd;
+	    var bestpos = -1;
+	    var bestbiaspos = bestpos;
+	
+	    var i, n, dist, biasdist, betafreq;
+	    for (i = 0; i < netsize; i++) {
+	      n = network[i];
+	
+	      dist = (Math.abs((n[0] | 0) - b) + Math.abs((n[1] | 0) - g) + Math.abs((n[2] | 0) - r)) | 0;
+	      if (dist < bestd) {
+	        bestd = dist;
+	        bestpos = i;
+	      }
+	
+	      biasdist = dist - ((bias[i] | 0) >> (intbiasshift - netbiasshift));
+	      if (biasdist < bestbiasd) {
+	        bestbiasd = biasdist;
+	        bestbiaspos = i;
+	      }
+	
+	      betafreq = (freq[i] >> betashift);
+	      freq[i] -= betafreq;
+	      bias[i] += (betafreq << gammashift);
+	    }
+	
+	    freq[bestpos] += beta;
+	    bias[bestpos] -= betagamma;
+	
+	    return bestbiaspos;
+	  }
+	
+	  /*
+	    Private Method: inxbuild
+	
+	    sorts network and builds netindex[0..255]
+	  */
+	  function inxbuild() {
+	    var i, j, p, q, smallpos, smallval, previouscol = 0, startpos = 0;
+	    for (i = 0; i < netsize; i++) {
+	      p = network[i];
+	      smallpos = i;
+	      smallval = p[1]; // index on g
+	      // find smallest in i..netsize-1
+	      for (j = i + 1; j < netsize; j++) {
+	        q = network[j];
+	        if (q[1] < smallval) { // index on g
+	          smallpos = j;
+	          smallval = q[1]; // index on g
+	        }
+	      }
+	      q = network[smallpos];
+	      // swap p (i) and q (smallpos) entries
+	      if (i != smallpos) {
+	        j = q[0];   q[0] = p[0];   p[0] = j;
+	        j = q[1];   q[1] = p[1];   p[1] = j;
+	        j = q[2];   q[2] = p[2];   p[2] = j;
+	        j = q[3];   q[3] = p[3];   p[3] = j;
+	      }
+	      // smallval entry is now in position i
+	
+	      if (smallval != previouscol) {
+	        netindex[previouscol] = (startpos + i) >> 1;
+	        for (j = previouscol + 1; j < smallval; j++)
+	          netindex[j] = i;
+	        previouscol = smallval;
+	        startpos = i;
+	      }
+	    }
+	    netindex[previouscol] = (startpos + maxnetpos) >> 1;
+	    for (j = previouscol + 1; j < 256; j++)
+	      netindex[j] = maxnetpos; // really 256
+	  }
+	
+	  /*
+	    Private Method: inxsearch
+	
+	    searches for BGR values 0..255 and returns a color index
+	    should be heavily optimized
+	  */
+	  function inxsearch(b, g, r) {
+	
+	    b = b | 0;
+	    g = g | 0;
+	    r = r | 0;
+	
+	    var a, p, dist;
+	
+	    var bestd = 1000; // biggest possible dist is 256*3
+	    var best = -1;
+	
+	    var i = netindex[g] | 0; // index on g
+	    var j = i - 1; // start at netindex[g] and work outwards
+	
+	    while ((i < netsize) || (j >= 0)) {
+	      if (i < netsize) {
+	        p = network[i];
+	        dist = (p[1] | 0) - g; // inx key
+	        if (dist >= bestd) i = netsize; // stop iter
+	        else {
+	          i++;
+	          if (dist < 0) dist = -dist;
+	          a = (p[0] | 0) - b; if (a < 0) a = -a;
+	          dist += a;
+	          if (dist < bestd) {
+	            a = (p[2] | 0) - r; if (a < 0) a = -a;
+	            dist += a;
+	            if (dist < bestd) {
+	              bestd = dist;
+	              best = p[3] | 0;
+	            }
+	          }
+	        }
+	      }
+	      if (j >= 0) {
+	        p = network[j];
+	        dist = g - (p[1] | 0); // inx key - reverse dif
+	        if (dist >= bestd) j = -1; // stop iter
+	        else {
+	          j--;
+	          if (dist < 0) dist = -dist;
+	          a = (p[0] | 0) - b; if (a < 0) a = -a;
+	          dist += a;
+	          if (dist < bestd) {
+	            a = (p[2] | 0) - r; if (a < 0) a = -a;
+	            dist += a;
+	            if (dist < bestd) {
+	              bestd = dist;
+	              best = p[3] | 0;
+	            }
+	          }
+	        }
+	      }
+	    }
+	
+	    return best;
+	  }
+	
+	  /*
+	    Private Method: learn
+	
+	    "Main Learning Loop"
+	  */
+	  function learn() {
+	    var i;
+	
+	    var lengthcount = pixels.length;
+	    var alphadec = 30 + ((samplefac - 1) / 3);
+	    var samplepixels = lengthcount / (3 * samplefac);
+	    var delta = ~~(samplepixels / ncycles);
+	    var alpha = initalpha;
+	    var radius = initradius;
+	
+	    var rad = radius >> radiusbiasshift;
+	
+	    if (rad <= 1) rad = 0;
+	    for (i = 0; i < rad; i++)
+	      radpower[i] = alpha * (((rad * rad - i * i) * radbias) / (rad * rad));
+	
+	    var step;
+	    if (lengthcount < minpicturebytes) {
+	      samplefac = 1;
+	      step = 3;
+	    } else if ((lengthcount % prime1) !== 0) {
+	      step = 3 * prime1;
+	    } else if ((lengthcount % prime2) !== 0) {
+	      step = 3 * prime2;
+	    } else if ((lengthcount % prime3) !== 0)  {
+	      step = 3 * prime3;
+	    } else {
+	      step = 3 * prime4;
+	    }
+	
+	    var b, g, r, j;
+	    var pix = 0; // current pixel
+	
+	    i = 0;
+	    while (i < samplepixels) {
+	      b = (pixels[pix] & 0xff) << netbiasshift;
+	      g = (pixels[pix + 1] & 0xff) << netbiasshift;
+	      r = (pixels[pix + 2] & 0xff) << netbiasshift;
+	
+	      j = contest(b, g, r);
+	
+	      altersingle(alpha, j, b, g, r);
+	      if (rad !== 0) alterneigh(rad, j, b, g, r); // alter neighbours
+	
+	      pix += step;
+	      if (pix >= lengthcount) pix -= lengthcount;
+	
+	      i++;
+	
+	      if (delta === 0) delta = 1;
+	      if (i % delta === 0) {
+	        alpha -= alpha / alphadec;
+	        radius -= radius / radiusdec;
+	        rad = radius >> radiusbiasshift;
+	
+	        if (rad <= 1) rad = 0;
+	        for (j = 0; j < rad; j++)
+	          radpower[j] = alpha * (((rad * rad - j * j) * radbias) / (rad * rad));
+	      }
+	    }
+	  }
+	
+	  /*
+	    Method: buildColormap
+	
+	    1. initializes network
+	    2. trains it
+	    3. removes misconceptions
+	    4. builds colorindex
+	  */
+	  function buildColormap() {
+	    init();
+	    learn();
+	    unbiasnet();
+	    inxbuild();
+	  }
+	  this.buildColormap = buildColormap;
+	
+	  /*
+	    Method: getColormap
+	
+	    builds colormap from the index
+	
+	    returns array in the format:
+	
+	    >
+	    > [r, g, b, r, g, b, r, g, b, ..]
+	    >
+	  */
+	  function getColormap() {
+	    var map = [];
+	    var index = [];
+	
+	    for (var i = 0; i < netsize; i++)
+	      index[network[i][3]] = i;
+	
+	    var k = 0;
+	    for (var l = 0; l < netsize; l++) {
+	      var j = index[l];
+	      map[k++] = (network[j][0]);
+	      map[k++] = (network[j][1]);
+	      map[k++] = (network[j][2]);
+	    }
+	    return map;
+	  }
+	  this.getColormap = getColormap;
+	
+	  /*
+	    Method: lookupRGB
+	
+	    looks for the closest *r*, *g*, *b* color in the map and
+	    returns its index
+	  */
+	  this.lookupRGB = inxsearch;
+	}
+	
+	module.exports = NeuQuant;
+
+
+/***/ },
+/* 3 */
+/***/ function(module, exports) {
+
+	/*
+	  LZWEncoder.js
+	
+	  Authors
+	  Kevin Weiner (original Java version - kweiner@fmsware.com)
+	  Thibault Imbert (AS3 version - bytearray.org)
+	  Johan Nordberg (JS version - code@johan-nordberg.com)
+	
+	  Acknowledgements
+	  GIFCOMPR.C - GIF Image compression routines
+	  Lempel-Ziv compression based on 'compress'. GIF modifications by
+	  David Rowley (mgardi@watdcsu.waterloo.edu)
+	  GIF Image compression - modified 'compress'
+	  Based on: compress.c - File compression ala IEEE Computer, June 1984.
+	  By Authors: Spencer W. Thomas (decvax!harpo!utah-cs!utah-gr!thomas)
+	  Jim McKie (decvax!mcvax!jim)
+	  Steve Davies (decvax!vax135!petsd!peora!srd)
+	  Ken Turkowski (decvax!decwrl!turtlevax!ken)
+	  James A. Woods (decvax!ihnp4!ames!jaw)
+	  Joe Orost (decvax!vax135!petsd!joe)
+	*/
+	
+	var EOF = -1;
+	var BITS = 12;
+	var HSIZE = 5003; // 80% occupancy
+	var masks = [0x0000, 0x0001, 0x0003, 0x0007, 0x000F, 0x001F,
+	             0x003F, 0x007F, 0x00FF, 0x01FF, 0x03FF, 0x07FF,
+	             0x0FFF, 0x1FFF, 0x3FFF, 0x7FFF, 0xFFFF];
+	
+	function LZWEncoder(width, height, pixels, colorDepth) {
+	  var initCodeSize = Math.max(2, colorDepth);
+	
+	  var accum = new Uint8Array(256);
+	  var htab = new Int32Array(HSIZE);
+	  var codetab = new Int32Array(HSIZE);
+	
+	  var cur_accum, cur_bits = 0;
+	  var a_count;
+	  var free_ent = 0; // first unused entry
+	  var maxcode;
+	
+	  // block compression parameters -- after all codes are used up,
+	  // and compression rate changes, start over.
+	  var clear_flg = false;
+	
+	  // Algorithm: use open addressing double hashing (no chaining) on the
+	  // prefix code / next character combination. We do a variant of Knuth's
+	  // algorithm D (vol. 3, sec. 6.4) along with G. Knott's relatively-prime
+	  // secondary probe. Here, the modular division first probe is gives way
+	  // to a faster exclusive-or manipulation. Also do block compression with
+	  // an adaptive reset, whereby the code table is cleared when the compression
+	  // ratio decreases, but after the table fills. The variable-length output
+	  // codes are re-sized at this point, and a special CLEAR code is generated
+	  // for the decompressor. Late addition: construct the table according to
+	  // file size for noticeable speed improvement on small files. Please direct
+	  // questions about this implementation to ames!jaw.
+	  var g_init_bits, ClearCode, EOFCode;
+	
+	  // Add a character to the end of the current packet, and if it is 254
+	  // characters, flush the packet to disk.
+	  function char_out(c, outs) {
+	    accum[a_count++] = c;
+	    if (a_count >= 254) flush_char(outs);
+	  }
+	
+	  // Clear out the hash table
+	  // table clear for block compress
+	  function cl_block(outs) {
+	    cl_hash(HSIZE);
+	    free_ent = ClearCode + 2;
+	    clear_flg = true;
+	    output(ClearCode, outs);
+	  }
+	
+	  // Reset code table
+	  function cl_hash(hsize) {
+	    for (var i = 0; i < hsize; ++i) htab[i] = -1;
+	  }
+	
+	  function compress(init_bits, outs) {
+	    var fcode, c, i, ent, disp, hsize_reg, hshift;
+	
+	    // Set up the globals: g_init_bits - initial number of bits
+	    g_init_bits = init_bits;
+	
+	    // Set up the necessary values
+	    clear_flg = false;
+	    n_bits = g_init_bits;
+	    maxcode = MAXCODE(n_bits);
+	
+	    ClearCode = 1 << (init_bits - 1);
+	    EOFCode = ClearCode + 1;
+	    free_ent = ClearCode + 2;
+	
+	    a_count = 0; // clear packet
+	
+	    ent = nextPixel();
+	
+	    hshift = 0;
+	    for (fcode = HSIZE; fcode < 65536; fcode *= 2) ++hshift;
+	    hshift = 8 - hshift; // set hash code range bound
+	    hsize_reg = HSIZE;
+	    cl_hash(hsize_reg); // clear hash table
+	
+	    output(ClearCode, outs);
+	
+	    outer_loop: while ((c = nextPixel()) != EOF) {
+	      fcode = (c << BITS) + ent;
+	      i = (c << hshift) ^ ent; // xor hashing
+	      if (htab[i] === fcode) {
+	        ent = codetab[i];
+	        continue;
+	      } else if (htab[i] >= 0) { // non-empty slot
+	        disp = hsize_reg - i; // secondary hash (after G. Knott)
+	        if (i === 0) disp = 1;
+	        do {
+	          if ((i -= disp) < 0) i += hsize_reg;
+	          if (htab[i] === fcode) {
+	            ent = codetab[i];
+	            continue outer_loop;
+	          }
+	        } while (htab[i] >= 0);
+	      }
+	      output(ent, outs);
+	      ent = c;
+	      if (free_ent < 1 << BITS) {
+	        codetab[i] = free_ent++; // code -> hashtable
+	        htab[i] = fcode;
+	      } else {
+	        cl_block(outs);
+	      }
+	    }
+	
+	    // Put out the final code.
+	    output(ent, outs);
+	    output(EOFCode, outs);
+	  }
+	
+	  function encode(outs) {
+	    outs.writeByte(initCodeSize); // write "initial code size" byte
+	    remaining = width * height; // reset navigation variables
+	    curPixel = 0;
+	    compress(initCodeSize + 1, outs); // compress and write the pixel data
+	    outs.writeByte(0); // write block terminator
+	  }
+	
+	  // Flush the packet to disk, and reset the accumulator
+	  function flush_char(outs) {
+	    if (a_count > 0) {
+	      outs.writeByte(a_count);
+	      outs.writeBytes(accum, 0, a_count);
+	      a_count = 0;
+	    }
+	  }
+	
+	  function MAXCODE(n_bits) {
+	    return (1 << n_bits) - 1;
+	  }
+	
+	  // Return the next pixel from the image
+	  function nextPixel() {
+	    if (remaining === 0) return EOF;
+	    --remaining;
+	    var pix = pixels[curPixel++];
+	    return pix & 0xff;
+	  }
+	
+	  function output(code, outs) {
+	    cur_accum &= masks[cur_bits];
+	
+	    if (cur_bits > 0) cur_accum |= (code << cur_bits);
+	    else cur_accum = code;
+	
+	    cur_bits += n_bits;
+	
+	    while (cur_bits >= 8) {
+	      char_out((cur_accum & 0xff), outs);
+	      cur_accum >>= 8;
+	      cur_bits -= 8;
+	    }
+	
+	    // If the next entry is going to be too big for the code size,
+	    // then increase it, if possible.
+	    if (free_ent > maxcode || clear_flg) {
+	      if (clear_flg) {
+	        maxcode = MAXCODE(n_bits = g_init_bits);
+	        clear_flg = false;
+	      } else {
+	        ++n_bits;
+	        if (n_bits == BITS) maxcode = 1 << BITS;
+	        else maxcode = MAXCODE(n_bits);
+	      }
+	    }
+	
+	    if (code == EOFCode) {
+	      // At EOF, write the rest of the buffer.
+	      while (cur_bits > 0) {
+	        char_out((cur_accum & 0xff), outs);
+	        cur_accum >>= 8;
+	        cur_bits -= 8;
+	      }
+	      flush_char(outs);
+	    }
+	  }
+	
+	  this.encode = encode;
+	}
+	
+	module.exports = LZWEncoder;
+
+
+/***/ }
+/******/ ]);
+//# sourceMappingURL=gif.worker.js.map
