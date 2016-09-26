@@ -274,7 +274,7 @@ function NeuQuant(pixels, samplefac) {
     var bestd = 1000; // biggest possible dist is 256*3
     var best = -1;
 
-    var i = netindex[g]; // index on g
+    var i = netindex[g] | 0; // index on g
     var j = i - 1; // start at netindex[g] and work outwards
 
     while ((i < netsize) || (j >= 0)) {
