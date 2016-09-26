@@ -53,7 +53,7 @@
     info = document.id('info');
     gif = new GIF({
       workers: 4,
-      workerScript: '/gif.js/gif.worker.js',
+      workerScript: '/gif.js.optimized/gif.worker.js',
       width: width,
       height: height
     });
