@@ -23,7 +23,7 @@ class GIF extends EventEmitter
     @options = {}
     @frames = []
 
-    @duplicates = {} # @duplicates[frame.data] == [1, 2, 3] or [4] if not duplicate
+    @groups = {} # for [data1, data1, data2, data1] @groups[data1] == [1, 3] and @groups[data2] = [2]
 
     @freeWorkers = []
     @activeWorkers = []
@@ -68,10 +68,10 @@ class GIF extends EventEmitter
     # find duplicates in frames.data
     index = @frames.length
     if index > 0 and frame.data? # frame 0 contains header, do not count it
-      if @duplicates[frame.data]?
-        @duplicates[frame.data].push index
+      if @groups[frame.data]?
+        @groups[frame.data].push index
       else
-        @duplicates[frame.data] = [index]
+        @groups[frame.data] = [index]
 
     @frames.push frame
 
@@ -126,8 +126,8 @@ class GIF extends EventEmitter
     if not duplicate
       @imageParts[frame.index] = frame
     else
-      duplicateFirstIndex = @duplicates[frame.data][0]
-      @imageParts[frame.index] = @imageParts[duplicateFirstIndex]
+      groupFirstIndex = @groups[frame.data][0]
+      @imageParts[frame.index] = @imageParts[groupFirstIndex]
     # remember calculated palette, spawn the rest of the workers
     if @options.globalPalette == true
       @options.globalPalette = frame.globalPalette
@@ -167,7 +167,7 @@ class GIF extends EventEmitter
 
     # check if one of duplicates
     index = @frames.indexOf frame
-    if frame.data? and @duplicates[frame.data]? and @duplicates[frame.data][0] != index
+    if frame.data? and @groups[frame.data]? and @groups[frame.data][0] != index
       @frameFinished frame, true
       return
 
