@@ -23,6 +23,7 @@ class GIF extends EventEmitter
     @options = {}
     @frames = []
 
+    # TODO: compare by instance and not by data
     @groups = {} # for [data1, data1, data2, data1] @groups[data1] == [1, 3] and @groups[data2] = [2]
 
     @freeWorkers = []
@@ -67,8 +68,8 @@ class GIF extends EventEmitter
 
     # find duplicates in frames.data
     index = @frames.length
-    if index > 0 and frame.data? # frame 0 contains header, do not count it
-      if @groups[frame.data]?
+    if index > 0 and frame.data # frame 0 contains header, do not count it
+      if @groups[frame.data]
         @groups[frame.data].push index
       else
         @groups[frame.data] = [index]
@@ -122,14 +123,14 @@ class GIF extends EventEmitter
   frameFinished: (frame, duplicate) ->
     @finishedFrames++
     if not duplicate
-      console.log "frame #{ frame.index } finished - #{ @activeWorkers.length } active"
+      console.log "frame #{ frame.index + 1 } finished - #{ @activeWorkers.length } active"
       @emit 'progress', @finishedFrames / @frames.length
       @imageParts[frame.index] = frame
     else
       currentIndex = frame.index
       groupFirstIndex = @groups[frame.data][0]
       frame = @imageParts[groupFirstIndex]
-      console.log "frame #{ currentIndex } is duplicate of #{ groupFirstIndex } - #{ @activeWorkers.length } active"
+      console.log "frame #{ currentIndex + 1 } is duplicate of #{ groupFirstIndex } - #{ @activeWorkers.length } active"
       @imageParts[currentIndex] = frame
     # remember calculated palette, spawn the rest of the workers
     if @options.globalPalette == true
@@ -170,7 +171,7 @@ class GIF extends EventEmitter
 
     # check if one of duplicates, but not the first one
     index = @frames.indexOf frame
-    if frame.data? and @groups[frame.data]? and @groups[frame.data][0] != index
+    if index > 0 and @groups[frame.data] and @groups[frame.data][0] != index
       frame.index = index
       setTimeout =>
         @frameFinished frame, true
