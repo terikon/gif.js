@@ -89,7 +89,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.running = false;
 	    this.options = {};
 	    this.frames = [];
-	    this.duplicates = {};
+	    this.groups = {};
 	    this.freeWorkers = [];
 	    this.activeWorkers = [];
 	    this.setOptions(options);
@@ -154,10 +154,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    index = this.frames.length;
 	    if (index > 0 && (frame.data != null)) {
-	      if (this.duplicates[frame.data] != null) {
-	        this.duplicates[frame.data].push(index);
+	      if (this.groups[frame.data] != null) {
+	        this.groups[frame.data].push(index);
 	      } else {
-	        this.duplicates[frame.data] = [index];
+	        this.groups[frame.data] = [index];
 	      }
 	    }
 	    return this.frames.push(frame);
@@ -232,15 +232,18 @@ return /******/ (function(modules) { // webpackBootstrap
 	  };
 	
 	  GIF.prototype.frameFinished = function(frame, duplicate) {
-	    var duplicateFirstIndex, i, j, ref;
-	    console.log("frame " + frame.index + " finished - " + this.activeWorkers.length + " active");
+	    var currentIndex, groupFirstIndex, i, j, ref;
 	    this.finishedFrames++;
-	    this.emit('progress', this.finishedFrames / this.frames.length);
 	    if (!duplicate) {
+	      console.log("frame " + frame.index + " finished - " + this.activeWorkers.length + " active");
+	      this.emit('progress', this.finishedFrames / this.frames.length);
 	      this.imageParts[frame.index] = frame;
 	    } else {
-	      duplicateFirstIndex = this.duplicates[frame.data][0];
-	      this.imageParts[frame.index] = this.imageParts[duplicateFirstIndex];
+	      currentIndex = frame.index;
+	      groupFirstIndex = this.groups[frame.data][0];
+	      frame = this.imageParts[groupFirstIndex];
+	      console.log("frame " + currentIndex + " is duplicate of " + groupFirstIndex + " - " + this.activeWorkers.length + " active");
+	      this.imageParts[currentIndex] = frame;
 	    }
 	    if (this.options.globalPalette === true) {
 	      this.options.globalPalette = frame.globalPalette;
@@ -300,8 +303,13 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    frame = this.frames[this.nextFrame++];
 	    index = this.frames.indexOf(frame);
-	    if ((frame.data != null) && (this.duplicates[frame.data] != null) && this.duplicates[frame.data][0] !== index) {
-	      this.frameFinished(frame, true);
+	    if ((frame.data != null) && (this.groups[frame.data] != null) && this.groups[frame.data][0] !== index) {
+	      frame.index = index;
+	      setTimeout((function(_this) {
+	        return function() {
+	          return _this.frameFinished(frame, true);
+	        };
+	      })(this), 0);
 	      return;
 	    }
 	    worker = this.freeWorkers.shift();

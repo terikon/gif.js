@@ -120,14 +120,17 @@ class GIF extends EventEmitter
     return numWorkers
 
   frameFinished: (frame, duplicate) ->
-    console.log "frame #{ frame.index } finished - #{ @activeWorkers.length } active"
     @finishedFrames++
-    @emit 'progress', @finishedFrames / @frames.length
     if not duplicate
+      console.log "frame #{ frame.index } finished - #{ @activeWorkers.length } active"
+      @emit 'progress', @finishedFrames / @frames.length
       @imageParts[frame.index] = frame
     else
+      currentIndex = frame.index
       groupFirstIndex = @groups[frame.data][0]
-      @imageParts[frame.index] = @imageParts[groupFirstIndex]
+      frame = @imageParts[groupFirstIndex]
+      console.log "frame #{ currentIndex } is duplicate of #{ groupFirstIndex } - #{ @activeWorkers.length } active"
+      @imageParts[currentIndex] = frame
     # remember calculated palette, spawn the rest of the workers
     if @options.globalPalette == true
       @options.globalPalette = frame.globalPalette
@@ -165,10 +168,13 @@ class GIF extends EventEmitter
 
     frame = @frames[@nextFrame++]
 
-    # check if one of duplicates
+    # check if one of duplicates, but not the first one
     index = @frames.indexOf frame
     if frame.data? and @groups[frame.data]? and @groups[frame.data][0] != index
-      @frameFinished frame, true
+      frame.index = index
+      setTimeout =>
+        @frameFinished frame, true
+      , 0
       return
 
     worker = @freeWorkers.shift()
