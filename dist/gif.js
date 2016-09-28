@@ -89,7 +89,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    this.running = false;
 	    this.options = {};
 	    this.frames = [];
-	    this.groups = {};
+	    this.groups = new Map();
 	    this.freeWorkers = [];
 	    this.activeWorkers = [];
 	    this.setOptions(options);
@@ -154,10 +154,10 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    index = this.frames.length;
 	    if (index > 0 && frame.data) {
-	      if (this.groups[frame.data]) {
-	        this.groups[frame.data].push(index);
+	      if (this.groups.has(frame.data)) {
+	        this.groups.get(frame.data).push(index);
 	      } else {
-	        this.groups[frame.data] = [index];
+	        this.groups.set(frame.data, [index]);
 	      }
 	    }
 	    return this.frames.push(frame);
@@ -240,7 +240,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	      this.imageParts[frame.index] = frame;
 	    } else {
 	      currentIndex = frame.index;
-	      groupFirstIndex = this.groups[frame.data][0];
+	      groupFirstIndex = this.groups.get(frame.data)[0];
 	      frame = this.imageParts[groupFirstIndex];
 	      console.log("frame " + (currentIndex + 1) + " is duplicate of " + groupFirstIndex + " - " + this.activeWorkers.length + " active");
 	      this.imageParts[currentIndex] = frame;
@@ -303,7 +303,7 @@ return /******/ (function(modules) { // webpackBootstrap
 	    }
 	    frame = this.frames[this.nextFrame++];
 	    index = this.frames.indexOf(frame);
-	    if (index > 0 && this.groups[frame.data] && this.groups[frame.data][0] !== index) {
+	    if (index > 0 && this.groups.has(frame.data) && this.groups.get(frame.data)[0] !== index) {
 	      frame.index = index;
 	      setTimeout((function(_this) {
 	        return function() {

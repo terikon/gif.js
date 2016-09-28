@@ -24,7 +24,7 @@ class GIF extends EventEmitter
     @frames = []
 
     # TODO: compare by instance and not by data
-    @groups = {} # for [data1, data1, data2, data1] @groups[data1] == [1, 3] and @groups[data2] = [2]
+    @groups = new Map() # for [data1, data1, data2, data1] @groups[data1] == [1, 3] and @groups[data2] = [2]
 
     @freeWorkers = []
     @activeWorkers = []
@@ -69,10 +69,10 @@ class GIF extends EventEmitter
     # find duplicates in frames.data
     index = @frames.length
     if index > 0 and frame.data # frame 0 contains header, do not count it
-      if @groups[frame.data]
-        @groups[frame.data].push index
+      if @groups.has(frame.data)
+        @groups.get(frame.data).push index
       else
-        @groups[frame.data] = [index]
+        @groups.set frame.data, [index]
 
     @frames.push frame
 
@@ -128,7 +128,7 @@ class GIF extends EventEmitter
       @imageParts[frame.index] = frame
     else
       currentIndex = frame.index
-      groupFirstIndex = @groups[frame.data][0]
+      groupFirstIndex = @groups.get(frame.data)[0]
       frame = @imageParts[groupFirstIndex]
       console.log "frame #{ currentIndex + 1 } is duplicate of #{ groupFirstIndex } - #{ @activeWorkers.length } active"
       @imageParts[currentIndex] = frame
@@ -171,7 +171,7 @@ class GIF extends EventEmitter
 
     # check if one of duplicates, but not the first one
     index = @frames.indexOf frame
-    if index > 0 and @groups[frame.data] and @groups[frame.data][0] != index
+    if index > 0 and @groups.has(frame.data) and @groups.get(frame.data)[0] != index
       frame.index = index
       setTimeout =>
         @frameFinished frame, true
