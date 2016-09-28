@@ -127,13 +127,12 @@ class GIF extends EventEmitter
       @emit 'progress', @finishedFrames / @frames.length
       @imageParts[frame.index] = frame
     else
-      currentIndex = frame.index
-      groupFirstIndex = @groups.get(frame.data)[0]
-      frame = @imageParts[groupFirstIndex]
-      console.log "frame #{ currentIndex + 1 } is duplicate of #{ groupFirstIndex } - #{ @activeWorkers.length } active"
-      @imageParts[currentIndex] = frame
+      indexOfDuplicate = @frames.indexOf frame
+      indexOfFirstInGroup = @groups.get(frame.data)[0]
+      console.log "frame #{ indexOfDuplicate + 1 } is duplicate of #{ indexOfFirstInGroup } - #{ @activeWorkers.length } active"
+      @imageParts[indexOfDuplicate] = { indexOfFirstInGroup: indexOfFirstInGroup } # do not put frame here, as it may not be available still. Put index.
     # remember calculated palette, spawn the rest of the workers
-    if @options.globalPalette == true
+    if @options.globalPalette == true and not duplicate
       @options.globalPalette = frame.globalPalette
       console.log "global palette analyzed"
       @renderNextFrame() for i in [1...@freeWorkers.length] if @frames.length > 2
@@ -143,6 +142,8 @@ class GIF extends EventEmitter
       @finishRendering()
 
   finishRendering: ->
+    for frame, index in @imageParts
+      @imageParts[index] = @imageParts[frame.indexOfFirstInGroup] if frame.indexOfFirstInGroup
     len = 0
     for frame in @imageParts
       len += (frame.data.length - 1) * frame.pageSize + frame.cursor
@@ -169,10 +170,9 @@ class GIF extends EventEmitter
 
     frame = @frames[@nextFrame++]
 
-    # check if one of duplicates, but not the first one
+    # check if one of duplicates, but not the first in group
     index = @frames.indexOf frame
     if index > 0 and @groups.has(frame.data) and @groups.get(frame.data)[0] != index
-      frame.index = index
       setTimeout =>
         @frameFinished frame, true
       , 0
