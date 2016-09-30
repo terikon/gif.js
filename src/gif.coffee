@@ -12,6 +12,7 @@ class GIF extends EventEmitter
     width: null # size derermined from first frame if possible
     height: null
     transparent: null
+    debug: false
 
   frameDefaults =
     delay: 500 # ms
@@ -101,7 +102,7 @@ class GIF extends EventEmitter
     loop
       worker = @activeWorkers.shift()
       break unless worker?
-      console.log "killing active worker"
+      @log "killing active worker"
       worker.terminate()
     @running = false
     @emit 'abort'
@@ -111,7 +112,7 @@ class GIF extends EventEmitter
   spawnWorkers: ->
     numWorkers = Math.min(@options.workers, @frames.length)
     [@freeWorkers.length...numWorkers].forEach (i) =>
-      console.log "spawning worker #{ i }"
+      @log "spawning worker #{ i }"
       worker = new Worker @options.workerScript
       worker.onmessage = (event) =>
         @activeWorkers.splice @activeWorkers.indexOf(worker), 1
@@ -123,18 +124,18 @@ class GIF extends EventEmitter
   frameFinished: (frame, duplicate) ->
     @finishedFrames++
     if not duplicate
-      console.log "frame #{ frame.index + 1 } finished - #{ @activeWorkers.length } active"
+      @log "frame #{ frame.index + 1 } finished - #{ @activeWorkers.length } active"
       @emit 'progress', @finishedFrames / @frames.length
       @imageParts[frame.index] = frame
     else
       indexOfDuplicate = @frames.indexOf frame
       indexOfFirstInGroup = @groups.get(frame.data)[0]
-      console.log "frame #{ indexOfDuplicate + 1 } is duplicate of #{ indexOfFirstInGroup } - #{ @activeWorkers.length } active"
+      @log "frame #{ indexOfDuplicate + 1 } is duplicate of #{ indexOfFirstInGroup } - #{ @activeWorkers.length } active"
       @imageParts[indexOfDuplicate] = { indexOfFirstInGroup: indexOfFirstInGroup } # do not put frame here, as it may not be available still. Put index.
     # remember calculated palette, spawn the rest of the workers
     if @options.globalPalette == true and not duplicate
       @options.globalPalette = frame.globalPalette
-      console.log "global palette analyzed"
+      @log "global palette analyzed"
       @renderNextFrame() for i in [1...@freeWorkers.length] if @frames.length > 2
     if null in @imageParts
       @renderNextFrame()
@@ -148,7 +149,7 @@ class GIF extends EventEmitter
     for frame in @imageParts
       len += (frame.data.length - 1) * frame.pageSize + frame.cursor
     len += frame.pageSize - frame.cursor
-    console.log "rendering finished - filesize #{ Math.round(len / 1000) }kb"
+    @log "rendering finished - filesize #{ Math.round(len / 1000) }kb"
     data = new Uint8Array len
     offset = 0
     for frame in @imageParts
@@ -181,7 +182,7 @@ class GIF extends EventEmitter
     worker = @freeWorkers.shift()
     task = @getTask frame
 
-    console.log "starting frame #{ task.index + 1 } of #{ @frames.length }"
+    @log "starting frame #{ task.index + 1 } of #{ @frames.length }"
     @activeWorkers.push worker
     worker.postMessage task#, [task.data.buffer]
 
@@ -226,5 +227,8 @@ class GIF extends EventEmitter
       throw new Error 'Invalid frame'
 
     return task
+
+  log: (msg) ->
+    console.log msg if @options.debug
 
 module.exports = GIF
